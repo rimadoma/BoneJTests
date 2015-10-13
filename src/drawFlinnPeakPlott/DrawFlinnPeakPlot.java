@@ -5,10 +5,10 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DrawFlinnPeakPlot {		
-	private static final int WIDTH = 1000;
-	private static final int HEIGHT = 1000;
+	private static final int WIDTH = 10;
+	private static final int HEIGHT = 10;
 	private static final int SCREEN_SIZE = WIDTH * HEIGHT;
-	private static int DEPTH = 1000;
+	private static int DEPTH = 10;
 
 	public static MockEllipsoid[] generateMockEllipsoids(int nEllipsoids) {
 		MockEllipsoid[] mockEllipsoids = new MockEllipsoid[nEllipsoids];
@@ -42,36 +42,38 @@ public class DrawFlinnPeakPlot {
 		for (int thread = 0; thread < threads.length; thread++) {
 			threads[thread] = new Thread(new Runnable() {
 				public void run() {
+
 					for (int z = ai.getAndIncrement(); z < DEPTH; z = ai
-							.getAndIncrement()) {					
-						int[] idSlice = maxIDs[z];
-						int l = 0;
-						for (int y = 0; y < HEIGHT; y++) {
-							final int offset = y * WIDTH;
-							for (int x = 0; x < WIDTH; x++)
-								if (idSlice[offset + x] >= 0)
-									l++;
-						}
-						float[] abl = new float[l];
-						float[] bcl = new float[l];
-						int j = 0;
-						for (int y = 0; y < HEIGHT; y++) {
-							final int offset = y * WIDTH;
-							for (int x = 0; x < WIDTH; x++) {
-								final int i = offset + x;
-								final int id = idSlice[i];
-								if (id >= 0) {
-									double radii[] = ellipsoids[id].getRadii();
-									abl[j] = (float) (radii[0] / radii[1]);
-									bcl[j] = (float) (radii[1] / radii[2]);
-									j++;
+							.getAndIncrement()) {
+						synchronized (threads) {						
+							int[] idSlice = maxIDs[z];
+							int l = 0;
+							for (int y = 0; y < HEIGHT; y++) {
+								final int offset = y * WIDTH;
+								for (int x = 0; x < WIDTH; x++)
+									if (idSlice[offset + x] >= 0)
+										l++;
+							}
+							float[] abl = new float[l];
+							float[] bcl = new float[l];
+							int j = 0;
+							for (int y = 0; y < HEIGHT; y++) {
+								final int offset = y * WIDTH;
+								for (int x = 0; x < WIDTH; x++) {
+									final int i = offset + x;
+									final int id = idSlice[i];
+									if (id >= 0) {
+										double radii[] = ellipsoids[id].getRadii();
+										abl[j] = (float) (radii[0] / radii[1]);
+										bcl[j] = (float) (radii[1] / radii[2]);
+										j++;
+									}
 								}
 							}
+							ab[z] = abl;
+							bc[z] = bcl;
 						}
-						ab[z] = abl;
-						bc[z] = bcl;
 					}
-
 				}
 			});
 		}
@@ -117,7 +119,7 @@ public class DrawFlinnPeakPlot {
 		float checkRow[] = ab[0];
 		return checkRow;		
 	}
-
+	
 	//It's assumed that the arrays have the same length
 	private static boolean rowsMatch(float rowA[], float rowB[]) {
 		for (int i = 0; i < rowA.length; i++) {
